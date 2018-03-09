@@ -1,0 +1,110 @@
+#!/bin/bash
+#PBS -N PROVEAN
+#PBS -S /bin/bash
+
+set -e
+
+function die {
+  >&2 echo "error: ${1}"
+  exit 1
+}
+
+#######################################
+# If provided, source the config file #
+#######################################
+
+if [[ -n "${config}" && ! -f "${config}" ]] ; then
+  die "Config file not found: ${config}"
+fi
+
+if [[ -n "${config}" && -f "${config}" ]] ; then
+  . "${config}"
+fi
+
+######################################################################
+# Check that we have a BLAST_DB, CACHE_DIR and JOB_FILE in our $PATH #
+######################################################################
+
+if [[ -z "${BLAST_DB}" || ! -d "${BLAST_DB}" ]] ; then
+  die '$BLAST_DB not found.'
+fi
+
+if [[ -z "${CACHE_DIR}" || ! -d "${CACHE_DIR}" ]] ; then
+  die '$CACHE_DIR not found.'
+fi
+
+if [[ -z "${JOB_FILE}" || ! -f "${JOB_FILE}" ]] ; then
+  die '$JOB_FILE not found.'
+fi
+
+##################################################################
+# Check that we have NCBI-BLAST, CD-HIT and PROVEAN in our $PATH #
+##################################################################
+
+for i in "psiblast" "blastdbcmd" "cd-hit" "provean" ; do
+  hash "${i}" 2>/dev/null || {
+    die "${i^^}: command not found."
+  }
+done
+
+##########################################################
+# Read the job file and slice out the protein identifier #
+##########################################################
+
+n=1
+while IFS= read -r protein_id ; do
+  protein_ids[$n]="${protein_id}"
+  ((n++))
+done < "${JOB_FILE}"
+
+protein_id="${protein_ids[$PBS_ARRAY_INDEX]}"
+
+############################################################
+# Check that the variations and query sequence files exist #
+############################################################
+
+variation_file="${CACHE_DIR%/}/${protein_id}/${protein_id}.var"
+
+if [ ! -f "${variation_file}" ] ; then
+  die "Variation file not found: ${variation_file}"
+fi
+
+query_file="${variation_file%.var}.fasta"
+
+if [ ! -f "${query_file}" ] ; then
+  die "Query file not found: ${query_file}"
+fi
+
+#############################
+# Build the PROVEAN command #
+#############################
+
+cmd=(provean)
+
+cmd+=(-q "${query_file}")
+cmd+=(-d "${BLAST_DB%/}/nr")
+cmd+=(-v "${variation_file}")
+cmd+=(--psiblast "$(type -P 'psiblast')")
+cmd+=(--cdhit "$(type -P 'cd-hit')")
+cmd+=(--blastdbcmd "$(type -P 'blastdbcmd')")
+
+supporting_set="${variation_file%.var}.sss"
+
+if [ -e "${supporting_set}" ] ; then
+  cmd+=(--supporting_set "${supporting_set}")
+else
+  cmd+=(--save_supporting_set "${supporting_set}")
+fi
+
+if [ -n "${TMPDIR}" ] ; then
+  cmd+=(--tmp_dir "${TMPDIR}")
+fi
+
+#################################################
+# Run PROVEAN and write the output to CACHE_DIR #
+#################################################
+
+stdout="${variation_file%.var}.out"
+stderr="${variation_file%.var}.err"
+
+"${cmd[@]}" 1> "${stdout}" 2> "${stderr}"
