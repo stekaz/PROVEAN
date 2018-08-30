@@ -1,7 +1,7 @@
-PATH="/software/ncbi-blast/ncbi-blast-2.7.1+/bin:${PATH}"
-PATH="/software/cd-hit/cd-hit-v4.6.8-2017-1208:${PATH}"
-PATH="/software/provean/provean-1.1.5/bin:${PATH}"
+PATH="/software/ncbi-blast/ncbi-blast-2.4.0+/bin:${PATH}"
+PATH="/working/genomeinfo/share/PROVEAN/cdhit:${PATH}"
+PATH="/working/genomeinfo/share/PROVEAN/provean-1.1.5/bin:${PATH}"
 
-export BLAST_DB="/path/to/blast_db"
-export CACHE_DIR="/path/to/cache_dir"
-export JOB_FILE="/path/to/jobs.txt"
+export BLAST_DB="/reference/software/ncbi/20171005"
+export CACHE_DIR="/working/genomeinfo/share/PROVEAN/cache"
+export JOB_FILE="/working/genomeinfo/share/PROVEAN/jobs.txt"
