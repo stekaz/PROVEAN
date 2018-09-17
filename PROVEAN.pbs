@@ -48,28 +48,29 @@ for i in "psiblast" "blastdbcmd" "cd-hit" "provean" ; do
 done
 
 ##########################################################
-# Read the job file and slice out the protein identifier #
+# Read the job file and slice out the peptide identifier #
 ##########################################################
 
 n=1
-while IFS= read -r protein_id ; do
-  protein_ids[$n]="${protein_id}"
+while IFS= read -r peptide_id ; do
+  peptide_ids[$n]="${peptide_id}"
   ((n++))
 done < "${JOB_FILE}"
 
-protein_id="${protein_ids[$PBS_ARRAY_INDEX]}"
+peptide_id="${peptide_ids[$PBS_ARRAY_INDEX]}"
+peptide_dir="${CACHE_DIR%/}/${peptide_id}"
 
 ############################################################
 # Check that the variations and query sequence files exist #
 ############################################################
 
-variation_file="${CACHE_DIR%/}/${protein_id}/${protein_id}.var"
+variation_file="${peptide_dir}/${peptide_id}.var"
 
 if [ ! -f "${variation_file}" ] ; then
   die "Variation file not found: ${variation_file}"
 fi
 
-query_file="${variation_file%.var}.fasta"
+query_file="${peptide_dir}/${peptide_id}.fasta"
 
 if [ ! -f "${query_file}" ] ; then
   die "Query file not found: ${query_file}"
@@ -88,7 +89,7 @@ cmd+=(--psiblast "$(type -P 'psiblast')")
 cmd+=(--cdhit "$(type -P 'cd-hit')")
 cmd+=(--blastdbcmd "$(type -P 'blastdbcmd')")
 
-supporting_set="${variation_file%.var}.sss"
+supporting_set="${peptide_dir}/${peptide_id}.sss"
 
 if [ -e "${supporting_set}" ] ; then
   cmd+=(--supporting_set "${supporting_set}")
@@ -104,7 +105,7 @@ fi
 # Run PROVEAN and write the output to CACHE_DIR #
 #################################################
 
-stdout="${variation_file%.var}.out"
-stderr="${variation_file%.var}.err"
+stdout="${peptide_dir}/${peptide_id}.out"
+stderr="${peptide_dir}/${peptide_id}.err"
 
 "${cmd[@]}" 1> "${stdout}" 2> "${stderr}"
