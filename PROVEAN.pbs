@@ -58,18 +58,19 @@ while IFS= read -r protein_id ; do
 done < "${JOB_FILE}"
 
 protein_id="${protein_ids[$PBS_ARRAY_INDEX]}"
+protein_dir="${CACHE_DIR%/}/${protein_id}"
 
 ############################################################
 # Check that the variations and query sequence files exist #
 ############################################################
 
-variation_file="${CACHE_DIR%/}/${protein_id}/${protein_id}.var"
+variation_file="${protein_dir}/${protein_id}.var"
 
 if [ ! -f "${variation_file}" ] ; then
   die "Variation file not found: ${variation_file}"
 fi
 
-query_file="${variation_file%.var}.fasta"
+query_file="${protein_dir}/${protein_id}.fasta"
 
 if [ ! -f "${query_file}" ] ; then
   die "Query file not found: ${query_file}"
@@ -88,7 +89,7 @@ cmd+=(--psiblast "$(type -P 'psiblast')")
 cmd+=(--cdhit "$(type -P 'cd-hit')")
 cmd+=(--blastdbcmd "$(type -P 'blastdbcmd')")
 
-supporting_set="${variation_file%.var}.sss"
+supporting_set="${protein_dir}/${protein_id}.sss"
 
 if [ -e "${supporting_set}" ] ; then
   cmd+=(--supporting_set "${supporting_set}")
@@ -104,7 +105,7 @@ fi
 # Run PROVEAN and write the output to CACHE_DIR #
 #################################################
 
-stdout="${variation_file%.var}.out"
-stderr="${variation_file%.var}.err"
+stdout="${protein_dir}/${protein_dir}.out"
+stderr="${protein_dir}/${protein_dir}.err"
 
 "${cmd[@]}" 1> "${stdout}" 2> "${stderr}"
